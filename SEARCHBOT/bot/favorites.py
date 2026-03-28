@@ -33,18 +33,33 @@ class FavoritesStore:
         self._data: dict[str, list] = self._load()
 
     def _load(self) -> dict:
-        if self._path.exists():
-            try:
-                return json.loads(self._path.read_text(encoding="utf-8"))
-            except Exception as e:
-                logger.warning("favorites: impossible de lire %s : %s", self._path, e)
+        bak = self._path.with_suffix(".json.bak")
+        for p in (self._path, bak):
+            if p.exists():
+                try:
+                    text = p.read_text(encoding="utf-8").strip()
+                    if text:
+                        data = json.loads(text)
+                        if isinstance(data, dict):
+                            return data
+                except Exception as e:
+                    logger.warning("favorites: impossible de lire %s : %s", p, e)
         return {}
 
     def _save(self) -> None:
-        self._path.write_text(
+        if self._path.exists():
+            try:
+                self._path.with_suffix(".json.bak").write_text(
+                    self._path.read_text(encoding="utf-8"), encoding="utf-8",
+                )
+            except Exception:
+                pass
+        tmp = self._path.with_suffix(".json.tmp")
+        tmp.write_text(
             json.dumps(self._data, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
+        tmp.replace(self._path)
 
     def add(self, user_id: int, item: dict) -> bool:
         """

@@ -25,6 +25,7 @@ Usage :
 """
 
 import logging
+import os
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from difflib import SequenceMatcher
@@ -35,9 +36,9 @@ from bot.meta_scraper import get_series_url, is_episode_url, scrape_series_page
 logger = logging.getLogger(__name__)
 
 # Nombre max de résultats DuckDuckGo par site (pour /search)
-_MAX_PER_SITE = 5
+_MAX_PER_SITE = int(os.getenv("SEARCH_MAX_PER_SITE", "5"))
 # Nombre max de résultats pour /usearch
-_MAX_UNIVERSAL = 10
+_MAX_UNIVERSAL = int(os.getenv("USEARCH_MAX_RESULTS", "10"))
 # Nombre max de threads parallèles
 _MAX_WORKERS = 6
 

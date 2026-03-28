@@ -45,18 +45,50 @@ class LastSeenState:
     # ── Persistance ───────────────────────────────────────────────────────────
 
     def _load(self) -> dict:
-        if self._path.exists():
-            try:
-                return json.loads(self._path.read_text(encoding="utf-8"))
-            except Exception as e:
-                logger.warning("Impossible de lire last_seen.json : %s", e)
+        bak = self._path.with_suffix(".json.bak")
+        data = self._try_read(self._path)
+        if data is not None:
+            return data
+        if bak.exists():
+            logger.warning("last_seen.json illisible, chargement du backup…")
+            data = self._try_read(bak)
+            if data is not None:
+                self._path.write_text(
+                    json.dumps(data, ensure_ascii=False, indent=2),
+                    encoding="utf-8",
+                )
+                return data
         return {}
 
+    @staticmethod
+    def _try_read(path: Path) -> dict | None:
+        if not path.exists():
+            return None
+        try:
+            text = path.read_text(encoding="utf-8").strip()
+            if not text:
+                return None
+            data = json.loads(text)
+            if isinstance(data, dict):
+                return data
+        except Exception as e:
+            logger.warning("Impossible de lire %s : %s", path, e)
+        return None
+
     def _save(self) -> None:
-        self._path.write_text(
+        if self._path.exists():
+            try:
+                self._path.with_suffix(".json.bak").write_text(
+                    self._path.read_text(encoding="utf-8"), encoding="utf-8",
+                )
+            except Exception:
+                pass
+        tmp = self._path.with_suffix(".json.tmp")
+        tmp.write_text(
             json.dumps(self._data, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
+        tmp.replace(self._path)
 
     # ── API publique ──────────────────────────────────────────────────────────
 
@@ -118,18 +150,33 @@ class MonitorConfig:
         self._data: dict = self._load()
 
     def _load(self) -> dict:
-        if self._path.exists():
-            try:
-                return json.loads(self._path.read_text(encoding="utf-8"))
-            except Exception:
-                pass
+        bak = self._path.with_suffix(".json.bak")
+        for p in (self._path, bak):
+            if p.exists():
+                try:
+                    text = p.read_text(encoding="utf-8").strip()
+                    if text:
+                        data = json.loads(text)
+                        if isinstance(data, dict):
+                            return data
+                except Exception:
+                    pass
         return _default_config()
 
     def _save(self) -> None:
-        self._path.write_text(
+        if self._path.exists():
+            try:
+                self._path.with_suffix(".json.bak").write_text(
+                    self._path.read_text(encoding="utf-8"), encoding="utf-8",
+                )
+            except Exception:
+                pass
+        tmp = self._path.with_suffix(".json.tmp")
+        tmp.write_text(
             json.dumps(self._data, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
+        tmp.replace(self._path)
 
     @property
     def enabled(self) -> bool:

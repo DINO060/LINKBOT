@@ -23,6 +23,24 @@ import httpx
 logger = logging.getLogger(__name__)
 
 _BASE = "https://api.jikan.moe/v4"
+
+_SEASON_ORDER = ["winter", "spring", "summer", "fall"]
+
+
+def _current_season() -> tuple[int, str]:
+    """Retourne (année, saison) en cours selon le mois actuel."""
+    now = datetime.datetime.now()
+    idx = (now.month - 1) // 3  # 0=winter 1=spring 2=summer 3=fall
+    return now.year, _SEASON_ORDER[idx]
+
+
+def _next_season() -> tuple[int, str]:
+    """Retourne (année, saison) de la prochaine saison."""
+    year, season = _current_season()
+    idx = _SEASON_ORDER.index(season)
+    if idx == 3:
+        return year + 1, "winter"
+    return year, _SEASON_ORDER[idx + 1]
 _HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "

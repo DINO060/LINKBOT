@@ -51,13 +51,17 @@ def _build_caption(item: dict) -> str:
     domain   = item.get("domain") or urlparse(item.get("url", "")).netloc.lstrip("www.")
     synopsis = (item.get("synopsis") or "")[:300]
 
-    # Ligne épisode
+    # Ligne épisode / saison
     ep_parts = []
-    is_chapter = item.get("content_type") == "chapter"
+    content_type = item.get("content_type", "episode")
+    is_chapter = content_type == "chapter"
+    is_season  = content_type == "season"
+    if item.get("season_number"):
+        ep_parts.append(f"Saison {item['season_number']}")
     if item.get("episode_number"):
         label = "Chapitre" if is_chapter else "Épisode"
         ep_parts.append(f"{label} {item['episode_number']}")
-    elif item.get("episode_count"):
+    elif not item.get("season_number") and item.get("episode_count"):
         label = "chapitres" if is_chapter else "épisodes"
         ep_parts.append(f"{item['episode_count']} {label}")
     if item.get("episode_duration"):
@@ -84,10 +88,16 @@ def _build_keyboard(item: dict) -> InlineKeyboardMarkup:
     domain = item.get("domain", "")
     is_tg  = str(domain).startswith("t.me")
 
+    content_type = item.get("content_type", "episode")
+    season_num   = item.get("season_number")
+
     if is_tg:
         label = f"\U0001f4e2 Voir le post {ep_num}" if ep_num else "\U0001f4e2 Voir le post"
-    elif item.get("content_type") == "chapter":
+    elif content_type == "chapter":
         label = f"\U0001f4da Lire chapitre {ep_num}" if ep_num else "\U0001f4da Lire"
+    elif content_type == "season":
+        s = f"saison {season_num}" if season_num else ""
+        label = f"\u25b6 Voir {s}".strip()
     else:
         label = f"\u25b6 Regarder \u00e9pisode {ep_num}" if ep_num else "\u25b6 Regarder"
 

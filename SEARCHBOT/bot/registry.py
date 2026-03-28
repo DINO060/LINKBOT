@@ -102,18 +102,60 @@ class SiteRegistry:
     # ── Persistance ───────────────────────────────────────────────────────────
 
     def _load(self) -> dict:
-        if self._path.exists():
-            try:
-                return json.loads(self._path.read_text(encoding="utf-8"))
-            except Exception as e:
-                logger.warning("Impossible de lire le registre : %s", e)
+        bak = self._path.with_suffix(".json.bak")
+        # Tenter le fichier principal
+        data = self._try_read(self._path)
+        if data is not None:
+            return data
+        # Fichier principal corrompu/absent → tenter le backup
+        if bak.exists():
+            logger.warning("Registre principal illisible, chargement du backup…")
+            data = self._try_read(bak)
+            if data is not None:
+                # Restaurer le backup comme fichier principal
+                self._path.write_text(
+                    json.dumps(data, ensure_ascii=False, indent=2),
+                    encoding="utf-8",
+                )
+                logger.info("Backup restauré avec succès (%d sites)", len(data))
+                return data
+        logger.warning("Aucun registre valide trouvé — démarrage à vide.")
         return {}
 
+    @staticmethod
+    def _try_read(path: Path) -> dict | None:
+        """Lit et parse un fichier JSON. Retourne None si invalide/absent."""
+        if not path.exists():
+            return None
+        try:
+            text = path.read_text(encoding="utf-8").strip()
+            if not text:
+                return None
+            data = json.loads(text)
+            if isinstance(data, dict):
+                return data
+        except Exception as e:
+            logger.warning("Impossible de lire %s : %s", path, e)
+        return None
+
     def _save(self) -> None:
-        self._path.write_text(
+        # Backup de l'ancien fichier avant écriture
+        if self._path.exists():
+            bak = self._path.with_suffix(".json.bak")
+            try:
+                bak.write_text(
+                    self._path.read_text(encoding="utf-8"),
+                    encoding="utf-8",
+                )
+            except Exception:
+                pass
+        # Écriture atomique : fichier temp puis rename
+        tmp = self._path.with_suffix(".json.tmp")
+        tmp.write_text(
             json.dumps(self._data, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
+        tmp.replace(self._path)
 
     # ── API publique ──────────────────────────────────────────────────────────
 
