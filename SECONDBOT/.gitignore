@@ -1,0 +1,52 @@
+# Fichiers Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Environnement et secrets
+.env
+.env.local
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Fichiers de sortie
+*.json
+*.txt
+*.csv
+output/
+resultats_*.json
+resultats_*.txt
+*_animelist.json
+search_*.json
+sites_*.json
+tous_les_sites.json
+
+# OS
+.DS_Store
+Thumbs.db
