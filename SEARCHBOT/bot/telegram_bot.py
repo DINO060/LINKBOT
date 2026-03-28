@@ -1143,7 +1143,7 @@ async def callback_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     # ── Bouton Watchlist ──
     if data == "menu:watchlist":
-        items = _watchlist_store.all(user_id)
+        items = _watchlist_store.all_keywords(user_id)
         if not items:
             await q.message.reply_text(
                 "📌 Ta watchlist est vide.\nUtilise /watch &lt;titre&gt;.",

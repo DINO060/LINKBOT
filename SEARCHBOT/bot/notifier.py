@@ -22,9 +22,11 @@ Usage :
     episode_number, episode_count, episode_duration
 """
 
+import io
 import logging
 from urllib.parse import urlparse
 
+import httpx
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ParseMode
 
@@ -93,6 +95,40 @@ def _build_keyboard(item: dict) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([buttons])
 
 
+async def _download_cover_for_notif(cover_url: str) -> io.BytesIO | None:
+    """Télécharge l'image côté serveur avec Referer anti-hotlinking."""
+    if not cover_url or not cover_url.startswith("http"):
+        return None
+    origin = f"{urlparse(cover_url).scheme}://{urlparse(cover_url).netloc}"
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/133.0.0.0 Safari/537.36"
+        ),
+        "Referer": origin + "/",
+        "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+    }
+    try:
+        async with httpx.AsyncClient(
+            headers=headers, follow_redirects=True, timeout=15,
+        ) as client:
+            resp = await client.get(cover_url)
+        if resp.status_code != 200:
+            return None
+        data = resp.content
+        if len(data) > 5 * 1024 * 1024:
+            return None
+        ct = resp.headers.get("content-type", "")
+        if not ct.startswith("image/"):
+            return None
+        buf = io.BytesIO(data)
+        buf.name = "cover.jpg"
+        return buf
+    except Exception:
+        return None
+
+
 async def send_notification(bot: Bot, chat_id: int, item: dict) -> None:
     """
     Envoie une carte de notification pour un nouvel épisode/contenu.
@@ -107,10 +143,13 @@ async def send_notification(bot: Bot, chat_id: int, item: dict) -> None:
 
     try:
         if cover:
+            # Télécharger côté serveur (contourne l'anti-hotlinking)
+            img_bytes = await _download_cover_for_notif(cover)
+            photo_src = img_bytes if img_bytes is not None else cover
             try:
                 await bot.send_photo(
                     chat_id=chat_id,
-                    photo=cover,
+                    photo=photo_src,
                     caption=caption,
                     parse_mode=ParseMode.HTML,
                     reply_markup=keyboard,
