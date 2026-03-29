@@ -144,7 +144,10 @@ Utilise les boutons pour changer de mode!
                 "Exemple: gaming, movies, streaming\n\n"
                 "💡 /menu pour revenir au menu"
             )
-        /Manga (MAL) activé!**\n\n"
+        elif data == "mode_anime":
+            self.user_modes[user_id] = "anime"
+            await query.message.reply_text(
+                f"🎌 **Mode Anime/Manga (MAL) activé!**\n\n"
                 "Base: MyAnimeList\n\n"
                 "Tape le nom d'un anime/manga pour le chercher.\n"
                 "Ou utilise:\n"
@@ -158,35 +161,31 @@ Utilise les boutons pour changer de mode!
         elif data == "mode_manhwa":
             self.user_modes[user_id] = "manhwa"
             await query.message.reply_text(
-                "📚 **Mode M (MAL)
-        elif data.startswith("details_"):
-            anime_id = int(data.split("_")[1])
-            await self._send_anime_details(query, anime_id)
-        
-        # Détails d'un média (AniList)
-        elif data.startswith("anilist_"):
-            media_id = int(data.split("_")[1])
-            await self._send_anilist_details(query, mediaTower of God...)\n"
+                "📚 **Mode Manhwa/Manhua (AniList) activé!**\n\n"
+                "Base: AniList - Tu peux chercher:\n"
+                "• Manhwa coréen 🇰🇷 (Solo Leveling, Tower of God...)\n"
                 "• Manhua chinois 🇨🇳\n"
                 "• Anime et Manga aussi!\n\n"
                 "Commandes:\n"
                 "• `trending` - Tendances actuelles\n"
                 "• `manhwa <nom>` - Cherche spécifiquement un manhwa KR\n"
-                "• Ou tape juste un nom!
-                "• `top` - Top animes\n"
-                "• `top 10` - Top 10\n"
-                "• `user username` - Liste MAL\n"
-                "• `season 2024 winter` - Saison\n\n"
-                "💡 /menu pour revenir au menu"
+                "• Ou tape juste un nom!\n\n"
+                "💡 /menu pour revenir au menu",
+                parse_mode='Markdown'
             )
-        
+
         elif data == "help":
             await self.help_command(query, context)
-        
-        # Détails d'un anime
+
+        # Détails d'un anime (MAL)
         elif data.startswith("details_"):
             anime_id = int(data.split("_")[1])
             await self._send_anime_details(query, anime_id)
+
+        # Détails d'un média (AniList)
+        elif data.startswith("anilist_"):
+            media_id = int(data.split("_")[1])
+            await self._send_anilist_details(query, media_id)
         
         # Retour au menu
         elif data == "back_menu":
@@ -198,16 +197,12 @@ Utilise les boutons pour changer de mode!
     
     async def text_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handler pour les messages texte"""
-        
-        # Mode Manhwa/AniList
-        elif mode == "manhwa":
-            await self._handle_manhwa_search(update, text)
         user_id = update.effective_user.id
         text = update.message.text.strip()
-        
+
         # Vérifier le mode de l'utilisateur
         mode = self.user_modes.get(user_id)
-        
+
         if not mode:
             await update.message.reply_text(
                 "👋 Choisis d'abord un mode!\n\n"
@@ -215,14 +210,18 @@ Utilise les boutons pour changer de mode!
                 reply_markup=self._get_main_menu_keyboard()
             )
             return
-        
+
         # Mode Sites
         if mode == "sites":
             await self._handle_sites_search(update, text)
-        
+
         # Mode Anime
         elif mode == "anime":
             await self._handle_anime_search(update, text)
+
+        # Mode Manhwa/AniList
+        elif mode == "manhwa":
+            await self._handle_manhwa_search(update, text)
     
     async def _handle_sites_search(self, update: Update, keyword: str):
         """Recherche de sites dans le catalogue"""
@@ -429,20 +428,38 @@ Utilise les boutons pour changer de mode!
         await update.message.reply_text(f"📅 {season.title()} {year}...")
         
         try:
-            anihandle_manhwa_search(self, update: Update, text: str):
+            animes = self.anime_api.get_seasonal_anime(year, season)
+
+            if not animes:
+                await update.message.reply_text("❌ Aucun anime trouvé!")
+                return
+
+            message = f"📅 **{season.title()} {year}** ({len(animes)} animes):\n\n"
+
+            for i, anime in enumerate(animes[:15], 1):
+                title = anime['title'][:50]
+                score = anime['score'] or 'N/A'
+                message += f"**{i}. {title}**\n"
+                message += f"   ⭐ {score}\n\n"
+                if len(message) > 3800:
+                    await update.message.reply_text(message, parse_mode='Markdown', disable_web_page_preview=True)
+                    message = ""
+
+            if message:
+                await update.message.reply_text(message, parse_mode='Markdown', disable_web_page_preview=True)
+
+        except Exception as e:
+            await update.message.reply_text(f"❌ Erreur: {str(e)}")
+
+    async def _handle_manhwa_search(self, update: Update, text: str):
         """Recherche de manhwa/manga sur AniList"""
         parts = text.lower().split()
-        
-        # Commande trending
+
         if parts[0] == "trending":
             await self._show_anilist_trending(update)
-        
-        # Recherche spécifique manhwa
         elif parts[0] == "manhwa" and len(parts) > 1:
             query = ' '.join(parts[1:])
             await self._search_anilist_manhwa(update, query)
-        
-        # Recherche générale
         else:
             await self._search_anilist(update, text)
     
@@ -635,31 +652,6 @@ Utilise les boutons pour changer de mode!
             
         except Exception as e:
             await query.message.reply_text(f"❌ Erreur: {str(e)}")
-    
-    async def _mes = self.anime_api.get_seasonal_anime(year, season)
-            
-            if not animes:
-                await update.message.reply_text("❌ Aucun anime trouvé!")
-                return
-            
-            message = f"📅 **{season.title()} {year}** ({len(animes)} animes):\n\n"
-            
-            for i, anime in enumerate(animes[:15], 1):
-                title = anime['title'][:50]
-                score = anime['score'] or 'N/A'
-                
-                message += f"**{i}. {title}**\n"
-                message += f"   ⭐ {score}\n\n"
-                
-                if len(message) > 3800:
-                    await update.message.reply_text(message, parse_mode='Markdown', disable_web_page_preview=True)
-                    message = ""
-            
-            if message:
-                await update.message.reply_text(message, parse_mode='Markdown', disable_web_page_preview=True)
-            
-        except Exception as e:
-            await update.message.reply_text(f"❌ Erreur: {str(e)}")
     
     async def _send_anime_details(self, query, anime_id: int):
         """Envoie les détails d'un anime"""

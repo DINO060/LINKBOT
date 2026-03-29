@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m py_compile SECONDBOT/telegram_bot.py)",
+      "Bash(for f:*)",
+      "Bash(do python:*)",
+      "Bash(echo \"OK: $f\")",
+      "Bash(echo \"FAIL: $f\")",
+      "Bash(python -m py_compile SECONDBOT/unified_bot_backup.py)"
+    ]
+  }
+}

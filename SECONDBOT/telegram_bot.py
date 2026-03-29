@@ -162,7 +162,16 @@ Le bot va scraper les infos et te les envoyer!
     async def details_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Commande /details pour obtenir les détails d'un anime"""
         if not context.args:
-            awdirectory_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+            await update.message.reply_text("❌ Utilise: /details <mal_id>")
+            return
+
+        try:
+            mal_id = int(context.args[0])
+            await self._send_anime_details(update, mal_id)
+        except ValueError:
+            await update.message.reply_text("❌ L'ID doit être un nombre!")
+
+    async def directory_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Commande /directory pour chercher dans un site d'annuaire"""
         if len(context.args) < 2:
             await update.message.reply_text(
@@ -279,15 +288,6 @@ Le bot va scraper les infos et te les envoyer!
             
         except Exception as e:
             await update.message.reply_text(f"❌ Erreur: {str(e)}")
-    
-    async def ait update.message.reply_text("❌ Utilise: /details <mal_id>")
-            return
-        
-        try:
-            mal_id = int(context.args[0])
-            await self._send_anime_details(update, mal_id)
-        except ValueError:
-            await update.message.reply_text("❌ L'ID doit être un nombre!")
     
     async def text_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handler pour les messages texte (recherche automatique)"""
